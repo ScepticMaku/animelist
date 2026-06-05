@@ -1,11 +1,7 @@
 import { supabase } from "@/src/utils/supabase";
 import { router, Stack } from "expo-router";
 import { useEffect } from "react";
-import * as Linking from 'expo-linking';
-import { View } from "react-native";
-import { NavBar } from "@/src/components/navbar";
-import { navItems } from "@/src/config/navConfig";
-import { showToast } from "@/src/components/showToast";
+import { Linking } from "react-native";
 import { createSessionFromUrl } from "@/src/components/createSessionFromUrl";
 
 export default function RootLayout() {
@@ -24,7 +20,6 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
-
   useEffect(() => {
     const getCurrentSession = async () => {
       const { data, error } = await supabase.auth.getSession();
@@ -34,10 +29,10 @@ export default function RootLayout() {
         return;
       }
 
-      if (data.session !== null) {
-        router.replace({
-          pathname: '/(main)/dashboard',
-          params: { flashMessage: 'You are already logged in.' }
+      if (data.session === null) {
+        router.push({
+          pathname: '/(auth)/login',
+          params: { flashMessage: 'You are logged out, please login again.' }
         });
       }
     }
@@ -45,10 +40,5 @@ export default function RootLayout() {
     getCurrentSession();
   }, []);
 
-  return (
-    <View style={{ flex: 1, position: 'relative' }}>
-      <Stack screenOptions={{ headerShown: false }} />
-      <NavBar items={navItems.mainNavItems} />
-    </View>
-  );
+  return <Stack screenOptions={{ headerShown: false }} />
 }

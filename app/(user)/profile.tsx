@@ -1,12 +1,16 @@
-import { NavBar } from "@/src/components/navbar";
-import { navItems } from "@/src/config/navConfig";
-import { StyleSheet, Text, View } from "react-native";
+import { supabase } from "@/src/utils/supabase";
+import { Button, StyleSheet, Text, View } from "react-native";
 
-export default function Browse() {
+export default function Profile() {
+
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+  }
+
   return (
     <View style={Styles.container}>
-      <Text style={Styles.title}>Browse Anime</Text>
-      <NavBar items={navItems.mainNavItems} />
+      <Text style={Styles.title}>Profile</Text>
+      <Button title="Logout" onPress={() => signOut()} />
     </View>
   );
 }
