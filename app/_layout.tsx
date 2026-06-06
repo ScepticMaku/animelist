@@ -2,6 +2,9 @@ import { router, Stack } from "expo-router";
 import * as Linking from 'expo-linking';
 import { supabase } from "@/src/utils/supabase";
 import { useEffect } from "react";
+import { ApolloClient, gql, HttpLink, InMemoryCache } from '@apollo/client';
+import { ApolloProvider } from "@apollo/client/react";
+
 
 export default function RootLayout() {
 
@@ -18,7 +21,15 @@ export default function RootLayout() {
   });
   */
 
+  const client = new ApolloClient({
+    link: new HttpLink({ uri: 'https://graphql.anilist.co' }),
+    cache: new InMemoryCache()
+  });
+
+
   return (
-    <Stack screenOptions={{ headerShown: false }} />
+    <ApolloProvider client={client}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </ApolloProvider>
   );
 }
