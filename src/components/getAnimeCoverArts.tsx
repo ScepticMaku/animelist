@@ -1,6 +1,6 @@
 import { useQuery } from '@apollo/client/react';
-import { DocumentNode } from '@apollo/client';
-import { Image, ImageSourcePropType, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { DocumentNode, WatchQueryFetchPolicy } from '@apollo/client';
+import { Image, ImageSourcePropType, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { loadErrorMessages, loadDevMessages } from '@apollo/client/dev';
 
 if (__DEV__) {
@@ -12,30 +12,38 @@ interface GetAnimeCoverArtsProps {
   query: DocumentNode;
   variables?: Record<string, any>;
   perPage?: number;
+  style?: StyleProp<ViewStyle>;
+  isHorizontal?: boolean;
+  hideVerticalScroll?: boolean;
+  fetchPolicy?: WatchQueryFetchPolicy;
+}
+
+interface PageData {
+  Page: {
+    media: [{
+      id: string,
+      title: {
+        romaji: string,
+      },
+      coverImage: {
+        large: string,
+      },
+    }];
+  };
 }
 
 export function GetAnimeCoverArts({
   query,
   variables = {},
-  perPage = 5
+  style,
+  isHorizontal,
+  hideVerticalScroll,
+  fetchPolicy
 }: GetAnimeCoverArtsProps) {
 
-  interface PageData {
-    Page: {
-      media: [{
-        id: string,
-        title: {
-          romaji: string,
-        },
-        coverImage: {
-          large: string,
-        },
-      }];
-    };
-  }
-
   const { loading, error, data } = useQuery<PageData>(query, {
-    variables: { ...variables, perPage },
+    variables: { ...variables },
+    fetchPolicy: fetchPolicy
   });
 
   if (loading) return <Text>Loading...</Text>
@@ -43,27 +51,32 @@ export function GetAnimeCoverArts({
 
   return (
     <ScrollView
-      horizontal={true}
-      showsHorizontalScrollIndicator={false}
-      style={Styles.container}
+      horizontal={isHorizontal}
+      showsHorizontalScrollIndicator={!isHorizontal}
+      showsVerticalScrollIndicator={!hideVerticalScroll}
     >
       <View
-        style={Styles.animeList}
+        style={style}
       >
-        {data?.Page.media.map((anime) => (
-          <View
-            key={anime.id}
-          >
-            <Image
-              style={Styles.animeCoverSize}
-              source={{
-                uri: anime.coverImage.large
-              }} />
-            <Text
-              style={Styles.animeTitle}
-            >{anime.title.romaji}</Text>
-          </View>
-        ))}
+        {data?.Page.media && data?.Page?.media.length > 0 ? (
+          data?.Page.media.map((anime) => (
+            <View
+              key={anime.id}
+            >
+              <Image
+                style={Styles.animeCoverSize}
+                source={{
+                  uri: anime.coverImage.large
+                }} />
+              <Text
+                style={Styles.animeTitle}
+              >{anime.title.romaji}</Text>
+            </View>
+          ))
+
+        ) : (
+          <Text>No anime found.</Text>
+        )}
       </View>
     </ScrollView>
   )
@@ -71,17 +84,14 @@ export function GetAnimeCoverArts({
 
 const Styles = StyleSheet.create({
   container: {
-    flexGrow: 0
-  },
-  animeList: {
-    flexDirection: 'row',
+    flexGrow: 1,
   },
   animeCoverSize: {
-    width: 140,
+    width: 123,
     height: 210,
     borderRadius: 5
   },
   animeTitle: {
-    width: 150,
+    width: 123,
   }
 });

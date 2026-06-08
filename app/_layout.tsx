@@ -23,7 +23,27 @@ export default function RootLayout() {
 
   const client = new ApolloClient({
     link: new HttpLink({ uri: 'https://graphql.anilist.co' }),
-    cache: new InMemoryCache()
+    cache: new InMemoryCache({
+      typePolicies: {
+        Page: {
+          fields: {
+            media: {
+              merge(existing = {}, incoming, { args }) {
+                const sortKey = args?.sort?.[0] || 'default';
+                return {
+                  ...existing,
+                  [sortKey]: incoming,
+                };
+              },
+              read(existing, { args }) {
+                const sortKey = args?.sort?.[0] || 'default';
+                return existing?.[sortKey] || [];
+              },
+            }
+          }
+        }
+      }
+    })
   });
 
 
