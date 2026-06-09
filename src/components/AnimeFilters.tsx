@@ -3,22 +3,47 @@ import { useQuery } from "@apollo/client/react";
 import { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Dropdown } from 'react-native-element-dropdown';
+import slugify from 'slugify';
 
 interface AnimeFiltersProps {
   query?: DocumentNode;
   label: string;
-  filterType?: 'genre' | 'year';
+  filterType?: 'genre' | 'year' | 'season' | 'format' | 'airing-status';
+  canSearch?: boolean;
 }
 
 interface queryData {
   GenreCollection: [string],
 }
 
-
-export function AnimeFilters({ query, label, filterType }: AnimeFiltersProps) {
+export function AnimeFilters({ query, label, filterType, canSearch }: AnimeFiltersProps) {
 
   const [value, setValue] = useState(null);
   const [isFocus, setIsFocus] = useState(false);
+
+  const seasons = [
+    "Fall",
+    "Summer",
+    "Spring",
+    "Winter"
+  ];
+
+  const formats = [
+    "TV Show",
+    "Movie",
+    "TV Short",
+    "Special",
+    "OVA",
+    "ONA",
+    "Music"
+  ];
+
+  const airingStatuses = [
+    "Airing",
+    "Finished",
+    "Not Yet Aired",
+    "Cancelled"
+  ]
 
   const EMPTY_QUERY = gql`query EmptyQuery { __typename }`;
 
@@ -30,7 +55,12 @@ export function AnimeFilters({ query, label, filterType }: AnimeFiltersProps) {
     );
   };
 
-
+  const slug = (text: string) => {
+    return slugify(text, {
+      replacement: '-',
+      lower: true
+    });
+  }
 
   const { data } = useQuery<queryData>(query || EMPTY_QUERY, {
     skip: !query || filterType !== 'genre'
@@ -38,13 +68,11 @@ export function AnimeFilters({ query, label, filterType }: AnimeFiltersProps) {
 
   const currentYear = new Date().getFullYear() + 1;
 
-
-
   const dataItems = useMemo(() => {
     if (filterType === 'genre' && data?.GenreCollection) {
       return data.GenreCollection.map((genre) => ({
         label: genre,
-        value: genre.toLowerCase()
+        value: slug(genre)
       }));
     }
 
@@ -58,10 +86,29 @@ export function AnimeFilters({ query, label, filterType }: AnimeFiltersProps) {
       );
     }
 
+    if (filterType === 'season') {
+      return seasons.map((season) => ({
+        label: season,
+        value: slug(season)
+      }));
+    }
+
+    if (filterType === 'format') {
+      return formats.map((format) => ({
+        label: format,
+        value: slug(format)
+      }));
+    }
+
+    if (filterType === 'airing-status') {
+      return airingStatuses.map((status) => ({
+        label: status,
+        value: slug(status),
+      }));
+    }
+
     return [];
   }, [filterType, data]);
-
-
 
   return (
     <View style={Styles.container}>
@@ -73,7 +120,7 @@ export function AnimeFilters({ query, label, filterType }: AnimeFiltersProps) {
         inputSearchStyle={Styles.inputSearchStyle}
         iconStyle={Styles.iconStyle}
         data={dataItems}
-        search
+        search={canSearch}
         maxHeight={300}
         labelField="label"
         valueField="value"

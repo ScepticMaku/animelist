@@ -51,8 +51,11 @@ export default function Browse() {
           <Button title="Filters" onPress={() => setShowFilterOptions(!showFilterOptions)} />
           {showFilterOptions && (
             <>
-              <AnimeFilters query={GENRE_QUERY} label="Genre" filterType="genre" />
-              <AnimeFilters label="Year" filterType="year" />
+              <AnimeFilters query={GENRE_QUERY} label="Genre" filterType="genre" canSearch={true} />
+              <AnimeFilters label="Year" filterType="year" canSearch={true} />
+              <AnimeFilters label="Season" filterType="season" />
+              <AnimeFilters label="Format" filterType="format" />
+              <AnimeFilters label="Airing Status" filterType="airing-status" />
             </>
           )}
         </View>
