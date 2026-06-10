@@ -15,7 +15,6 @@ interface GetAnimeCoverArtsProps {
   style?: StyleProp<ViewStyle>;
   isHorizontal?: boolean;
   hideVerticalScroll?: boolean;
-  fetchPolicy?: WatchQueryFetchPolicy;
 }
 
 interface PageData {
@@ -38,13 +37,14 @@ export function GetAnimeCoverArts({
   style,
   isHorizontal,
   hideVerticalScroll,
-  fetchPolicy
 }: GetAnimeCoverArtsProps) {
 
   const { loading, error, data } = useQuery<PageData>(query, {
     variables: { ...variables },
-    fetchPolicy: fetchPolicy
+    fetchPolicy: 'no-cache',
   });
+
+
 
   if (loading) return <Text>Loading...</Text>
   if (error) return <Text>Error fetching anime: {error.message}</Text>

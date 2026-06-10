@@ -4,25 +4,15 @@ import { Button, ScrollView, StyleSheet, Text, TextInput, View } from "react-nat
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useEffect, useState } from "react";
 import validator from 'validator';
-import { SEARCH_ANIME, GET_ALL_TIME_POPULAR, GENRE_QUERY, GET_POPULAR_THIS_SEASON, GET_TRENDING_ANIME } from "@/src/config/queryConfig";
+import { SEARCH_ANIME_OR_FILTERS, GET_ALL_TIME_POPULAR, GENRE_QUERY, GET_POPULAR_THIS_SEASON, GET_TRENDING_ANIME } from "@/src/config/queryConfig";
 
 const currentYear = new Date().getFullYear();
 
 export default function Browse() {
 
   const [searchValue, setSearchValue] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [genres, setGenres] = useState<any>([]);
   const [showFilterOptions, setShowFilterOptions] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchValue);
-    }, 500);
-
-    return () => {
-      clearTimeout(timer)
-    };
-  }, [searchValue]);
 
   return (
     <View style={Styles.container}>
@@ -51,7 +41,7 @@ export default function Browse() {
           <Button title="Filters" onPress={() => setShowFilterOptions(!showFilterOptions)} />
           {showFilterOptions && (
             <>
-              <AnimeFilters query={GENRE_QUERY} label="Genre" filterType="genre" canSearch={true} />
+              <AnimeFilters query={GENRE_QUERY} label="Genre" filterType="genre" canSearch={true} isMulti={true} onValueChange={(value) => setGenres(value)} />
               <AnimeFilters label="Year" filterType="year" canSearch={true} />
               <AnimeFilters label="Season" filterType="season" />
               <AnimeFilters label="Format" filterType="format" />
@@ -81,13 +71,12 @@ export default function Browse() {
             <Text style={Styles.HeaderText}>All Time Popular</Text>
             <Text style={{ color: 'blue' }}>Show All</Text>
           </View>
-          <GetAnimeCoverArts query={GET_ALL_TIME_POPULAR} variables={{ page: 1, perPage: 5, sort: "POPULARITY_DESC", type: "ANIME" }} style={{ flexDirection: 'row', gap: 10 }} isHorizontal={true} />
+          {<GetAnimeCoverArts query={GET_ALL_TIME_POPULAR} variables={{ page: 1, perPage: 5, sort: "POPULARITY_DESC", type: "ANIME" }} style={{ flexDirection: 'row', gap: 10 }} isHorizontal={true} />}
         </ScrollView>
       ) : (
         <GetAnimeCoverArts
-          query={SEARCH_ANIME}
-          variables={{ page: 1, perPage: 50, type: "ANIME", search: debouncedSearch }}
-          fetchPolicy="network-only"
+          query={SEARCH_ANIME_OR_FILTERS}
+          variables={{ search: searchValue }}
           style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}
         />
       )}

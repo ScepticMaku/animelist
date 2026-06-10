@@ -17,7 +17,7 @@ export const GET_TRENDING_ANIME = gql`
 `;
 
 export const GET_POPULAR_THIS_SEASON = gql`
-  query GetTrendingAnime($page: Int, $perPage: Int, $sort: [MediaSort], $type: MediaType, $seasonYear: Int, $status: MediaStatus) {
+  query GetPopularThisSeason($page: Int, $perPage: Int, $sort: [MediaSort], $type: MediaType, $seasonYear: Int, $status: MediaStatus) {
   Page(page: $page, perPage: $perPage) {
     media(sort: $sort, type: $type, seasonYear: $seasonYear, status: $status) {
       id
@@ -33,9 +33,9 @@ export const GET_POPULAR_THIS_SEASON = gql`
 `;
 
 export const GET_ALL_TIME_POPULAR = gql`
-  query GetAllTimePopular($page: Int, $perPage: Int, $sort: [MediaSort], $type: MediaType) {
+  query GetPopularThisSeason($page: Int, $perPage: Int, $sort: [MediaSort], $type: MediaType, $seasonYear: Int, $status: MediaStatus) {
   Page(page: $page, perPage: $perPage) {
-    media(sort: $sort, type: $type) {
+    media(sort: $sort, type: $type, seasonYear: $seasonYear, status: $status) {
       id
       title {
         romaji
@@ -48,10 +48,28 @@ export const GET_ALL_TIME_POPULAR = gql`
 }
 `;
 
-export const SEARCH_ANIME = gql`
-  query SearchAnime($page: Int, $perPage: Int, $type: MediaType, $search: String) {
+export const SEARCH_ANIME_OR_FILTERS = gql`
+  query SearchAnime(
+  $page: Int, 
+  $perPage: Int, 
+  $type: MediaType, 
+  $search: String,
+  $genre: String,
+  $year: Int,
+  $season: MediaSeason,
+  $format: MediaFormat,
+  $status: MediaStatus
+) {
   Page(page: $page, perPage: $perPage) {
-    media(type: $type, search: $search) {
+    media(
+      type: $type, 
+      search: $search,
+      genre: $genre,
+      seasonYear: $year,
+      season: $season,
+      format: $format,
+      status: $status
+    ) {
       id
       title {
         romaji
@@ -61,13 +79,11 @@ export const SEARCH_ANIME = gql`
       }
     }
   }
-}
-`;
+}`;
 
 export const GENRE_QUERY = gql`
   query GenreCollection {
     GenreCollection
   }
 `;
-
 
