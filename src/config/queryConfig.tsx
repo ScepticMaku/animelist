@@ -48,28 +48,10 @@ export const GET_ALL_TIME_POPULAR = gql`
 }
 `;
 
-export const SEARCH_ANIME_OR_FILTERS = gql`
-  query SearchAnime(
-  $page: Int, 
-  $perPage: Int, 
-  $type: MediaType, 
-  $search: String,
-  $genre: String,
-  $year: Int,
-  $season: MediaSeason,
-  $format: MediaFormat,
-  $status: MediaStatus
-) {
+export const SEARCH_OR_FILTER_ANIME = gql`
+  query SearchOrFilterAnime($page: Int, $perPage: Int, $type: MediaType, $genreIn: [String], $seasonYear: Int, $formatIn: [MediaFormat], $season: MediaSeason, $status: MediaStatus, $search: String) {
   Page(page: $page, perPage: $perPage) {
-    media(
-      type: $type, 
-      search: $search,
-      genre: $genre,
-      seasonYear: $year,
-      season: $season,
-      format: $format,
-      status: $status
-    ) {
+    media(type: $type, genre_in: $genreIn, seasonYear: $seasonYear, season: $season, format_in: $formatIn, status: $status, search: $search) {
       id
       title {
         romaji
@@ -79,11 +61,18 @@ export const SEARCH_ANIME_OR_FILTERS = gql`
       }
     }
   }
-}`;
+ }
+`;
 
 export const GENRE_QUERY = gql`
   query GenreCollection {
     GenreCollection
   }
+`;
+
+export const EMPTY_QUERY = gql`
+  query EmptyQuery {
+  __typename
+}
 `;
 

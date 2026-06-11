@@ -4,6 +4,9 @@ import { supabase } from "@/src/utils/supabase";
 import { useEffect } from "react";
 import { ApolloClient, gql, HttpLink, InMemoryCache } from '@apollo/client';
 import { ApolloProvider } from "@apollo/client/react";
+import { from } from '@apollo/client';
+import { onError } from '@apollo/client/link/error';
+import { RetryLink } from '@apollo/client/link/retry';
 
 
 export default function RootLayout() {

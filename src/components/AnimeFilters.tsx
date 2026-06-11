@@ -1,30 +1,34 @@
 import { DocumentNode, gql, OperationVariables, TypedDocumentNode } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Dropdown, MultiSelect } from 'react-native-element-dropdown';
 import slugify from 'slugify';
+import { EMPTY_QUERY } from "../config/queryConfig";
+import { useDebounce } from "./UseDebounce";
 
 interface AnimeFiltersProps {
   query?: DocumentNode;
   label: string;
   filterType?: 'genre' | 'year' | 'season' | 'format' | 'airing-status';
   canSearch?: boolean;
-  onValueChange?: (value: string | string[] | null) => void;
+  onValueChange?: (value: string | string[] | null | number) => void;
   isMulti?: boolean;
+  setSelectedValue?: any;
 }
 
 interface queryData {
   GenreCollection: [string],
 }
 
-export function AnimeFilters({ query, label, filterType, canSearch, onValueChange, isMulti }: AnimeFiltersProps) {
+export function AnimeFilters({ query, label, filterType, canSearch, onValueChange, isMulti, setSelectedValue }: AnimeFiltersProps) {
 
   const [value, setValue] = useState<any>(isMulti ? [] : null);
   const [isFocus, setIsFocus] = useState(false);
 
   const hasValue = isMulti ? value && value.length > 0 : value !== null;
+  const debounceQuery = useDebounce(query, 500);
 
   const seasons = [
     "Fall",
@@ -50,8 +54,6 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
     "Cancelled"
   ]
 
-  const EMPTY_QUERY = gql`query EmptyQuery {  }`;
-
   const renderLabel = () => {
     return (
       <Text>
@@ -67,8 +69,8 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
     });
   }
 
-  const { data } = useQuery<queryData>(query || EMPTY_QUERY, {
-    skip: !query || filterType !== 'genre'
+  const { data } = useQuery<queryData>(debounceQuery || EMPTY_QUERY, {
+    skip: !debounceQuery || filterType !== 'genre'
   });
 
   const currentYear = new Date().getFullYear() + 1;
@@ -86,7 +88,7 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
         { length: currentYear - 1940 + 1 },
         (_, i) => ({
           label: (currentYear - i).toString(),
-          value: (currentYear - 1)
+          value: (currentYear - i)
         })
       );
     }
@@ -94,21 +96,21 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
     if (filterType === 'season') {
       return seasons.map((season) => ({
         label: season,
-        value: slug(season)
+        value: season.toUpperCase()
       }));
     }
 
     if (filterType === 'format') {
       return formats.map((format) => ({
         label: format,
-        value: slug(format)
+        value: format.toUpperCase().replace(/ /g, '_')
       }));
     }
 
     if (filterType === 'airing-status') {
       return airingStatuses.map((status) => ({
         label: status,
-        value: slug(status),
+        value: status.toUpperCase().replace(/ /g, '_'),
       }));
     }
 
@@ -120,6 +122,8 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
     setValue(resetValue);
     onValueChange?.(resetValue);
   };
+
+
 
   return (
     <View style={Styles.container}>
@@ -167,7 +171,7 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
           valueField="value"
           placeholder="Select"
           searchPlaceholder="Search..."
-          value={value}
+          value={setSelectedValue ? setSelectedValue : value}
           onFocus={() => setIsFocus(true)}
           onBlur={() => setIsFocus(false)}
           onChange={item => {
@@ -176,7 +180,7 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
             onValueChange?.(item.value);
           }}
           renderRightIcon={() => (
-            hasValue ? (
+            (hasValue || setSelectedValue) ? (
               <Ionicons onPress={handleClear} name="close-outline" size={26} style={{ paddingLeft: 10 }} />
             ) : (
               <Ionicons name="chevron-down-outline" size={20} style={{ paddingLeft: 10 }} />

@@ -44,8 +44,6 @@ export function GetAnimeCoverArts({
     fetchPolicy: 'no-cache',
   });
 
-
-
   if (loading) return <Text>Loading...</Text>
   if (error) return <Text>Error fetching anime: {error.message}</Text>
 
