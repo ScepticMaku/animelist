@@ -114,11 +114,12 @@ query ShowAnimeInfo($mediaId: Int, $isMain: Boolean) {
         title {
           romaji
         }
+        format
+        status
       }
     }
     title {
-      romaji,
-      english
+      romaji
     }
     status
     studios(isMain: $isMain) {
