@@ -1,8 +1,10 @@
 import { supabase } from "@/src/utils/supabase";
 import { router, Stack } from "expo-router";
 import { useEffect } from "react";
-import { Linking } from "react-native";
+import { Linking, View } from "react-native";
 import { createSessionFromUrl } from "@/src/components/createSessionFromUrl";
+import { NavBar } from "@/src/components/navbar";
+import { navItems } from "@/src/config/navConfig";
 
 export default function RootLayout() {
 
@@ -40,5 +42,10 @@ export default function RootLayout() {
     getCurrentSession();
   }, []);
 
-  return <Stack screenOptions={{ headerShown: false }} />
+  return (
+    <View style={{ flex: 1, position: 'relative' }}>
+      <Stack screenOptions={{ headerShown: false }} />
+      <NavBar items={navItems.mainNavItems} />
+    </View>
+  );
 }

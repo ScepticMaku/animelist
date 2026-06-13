@@ -2,7 +2,7 @@ import { showToast } from "@/src/components/showToast";
 import { supabase } from "@/src/utils/supabase";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Button, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Button, StyleSheet, Text, View } from "react-native";
 
 export default function Dashboard() {
 
@@ -39,7 +39,11 @@ export default function Dashboard() {
   return (
     <View style={Styles.container}>
       <Text style={Styles.title}>Dashboard</Text>
-      <Button title="Logout" onPress={() => signOut()} />
+      {!processing ? (
+        <Button title="Logout" onPress={() => signOut()} />
+      ) : (
+        <ActivityIndicator />
+      )}
     </View>
   );
 }

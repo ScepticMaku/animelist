@@ -1,7 +1,8 @@
 import { useQuery } from '@apollo/client/react';
 import { DocumentNode, WatchQueryFetchPolicy } from '@apollo/client';
-import { Image, ImageSourcePropType, ScrollView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { Image, ImageSourcePropType, ScrollView, StyleProp, StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { loadErrorMessages, loadDevMessages } from '@apollo/client/dev';
+import { router } from 'expo-router';
 
 if (__DEV__) {
   loadDevMessages();
@@ -20,7 +21,7 @@ interface GetAnimeCoverArtsProps {
 interface PageData {
   Page: {
     media: [{
-      id: string,
+      id: number,
       title: {
         romaji: string,
       },
@@ -38,6 +39,13 @@ export function GetAnimeCoverArts({
   isHorizontal,
   hideVerticalScroll,
 }: GetAnimeCoverArtsProps) {
+
+  const selectAnime = (id: number) => {
+    router.push({
+      pathname: '/anime-info',
+      params: { animeId: id }
+    });
+  }
 
   const { loading, error, data } = useQuery<PageData>(query, {
     variables: { ...variables },
@@ -58,8 +66,9 @@ export function GetAnimeCoverArts({
       >
         {data?.Page.media && data?.Page?.media.length > 0 ? (
           data?.Page.media.map((anime) => (
-            <View
+            <TouchableOpacity
               key={anime.id}
+              onPress={() => selectAnime(anime.id)}
             >
               <Image
                 style={Styles.animeCoverSize}
@@ -69,7 +78,7 @@ export function GetAnimeCoverArts({
               <Text
                 style={Styles.animeTitle}
               >{anime.title.romaji}</Text>
-            </View>
+            </TouchableOpacity>
           ))
 
         ) : (

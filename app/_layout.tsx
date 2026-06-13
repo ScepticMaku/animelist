@@ -7,6 +7,8 @@ import { ApolloProvider } from "@apollo/client/react";
 import { from } from '@apollo/client';
 import { onError } from '@apollo/client/link/error';
 import { RetryLink } from '@apollo/client/link/retry';
+import { NavBar } from "@/src/components/navbar";
+import { navItems } from "@/src/config/navConfig";
 
 
 export default function RootLayout() {

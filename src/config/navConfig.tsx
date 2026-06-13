@@ -1,7 +1,12 @@
 export const navItems = {
-  mainNavItems: [
+  guestNavItems: [
     { screenName: '/', icon: require('../../assets/images/gojolist_logo.webp') },
     { label: 'Browse', screenName: '/browse' },
     { screenName: '/(auth)/login', isButton: true }
   ],
+  mainNavItems: [
+    { screenName: '/(main)/dashboard', icon: require('../../assets/images/gojolist_logo.webp') },
+    { label: 'Browse', screenName: '/browse' },
+    { screenName: '/(user)/profile', profileImage: require('../../assets/images/profile_picture.webp') }
+  ]
 }

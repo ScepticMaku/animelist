@@ -1,11 +1,37 @@
 import { NavBar } from "@/src/components/navbar";
 import { navItems } from "@/src/config/navConfig";
+import { supabase } from "@/src/utils/supabase";
 import { router } from "expo-router";
+import { useEffect } from "react";
 import { Button, Image, StyleSheet, Text, View } from "react-native";
 
 const appLogo = require('@/assets/images/gojolist_logo.webp');
 
 export default function Index() {
+
+  useEffect(() => {
+    const getCurrentSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error("error getting user session: ", error.message);
+        return;
+      }
+
+      if (data.session !== null) {
+        router.push({
+          pathname: '/(main)/dashboard',
+          params: {
+            flashMessage: 'You are already logged in.'
+          }
+        });
+      }
+    }
+
+    getCurrentSession();
+  }, []);
+
+
   return (
     <View
       style={Styles.container}

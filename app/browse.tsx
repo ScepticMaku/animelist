@@ -1,9 +1,12 @@
 import { GetAnimeCoverArts } from "@/src/components/getAnimeCoverArts";
 import { AnimeFilters } from '@/src/components/AnimeFilters';
-import { Button, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Button, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useEffect, useState } from "react";
 import { GET_ALL_TIME_POPULAR, GENRE_QUERY, GET_POPULAR_THIS_SEASON, GET_TRENDING_ANIME, SEARCH_OR_FILTER_ANIME } from "@/src/config/queryConfig";
+import { NavBar } from "@/src/components/navbar";
+import { navItems } from "@/src/config/navConfig";
+import { supabase } from "@/src/utils/supabase";
 
 const currentYear = new Date().getFullYear();
 
@@ -16,6 +19,9 @@ export default function Browse() {
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [season, setSeason] = useState<string | null>(null);
   const [airingStatus, setAiringStatus] = useState<string | null>(null);
+  const [sortFilter, setSortFilter] = useState<string | null>(null);
+  const [filterTitle, setFilterTitle] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     if (showFilterOptions === false || genres && genres.length === 0) {
@@ -32,123 +38,191 @@ export default function Browse() {
 
   }, [showFilterOptions, genres, season, currentYear, formats]);
 
+  const clearFilters = () => {
+    setSearchValue(null);
+    setGenres(null);
+    setYear(null);
+    setSeason(null);
+    setFormats(null);
+    setAiringStatus(null);
+    setSortFilter(null);
+    setFilterTitle('');
+    setShowFilterOptions(false);
+  }
+
+  useEffect(() => {
+    const getCurrentSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error("error getting user session: ", error.message);
+        return;
+      }
+
+      if (data.session === null) {
+        setIsLoggedIn(false);
+      } else {
+        setIsLoggedIn(true);
+      }
+    }
+
+    getCurrentSession();
+  }, [setIsLoggedIn]);
+
+
   return (
-    <ScrollView style={Styles.container}>
-      <View
-        style={{ width: 400 }}
-      >
-        <Text style={Styles.title}>Browse Anime</Text>
-        <View style={Styles.spacer} />
-        <View style={{ gap: 5 }}>
-          <View
-            style={Styles.searchInput}
-          >
-            <TextInput
-              style={Styles.searchBar}
-              placeholder="Search animes..."
-              keyboardType="default"
-              value={searchValue as string}
-              onChangeText={(text) => setSearchValue(text)}
-            />
-            <Ionicons
-              name="search"
-              size={26}
-              style={Styles.searchIcon}
-            />
-          </View>
-          <Button title="Filters" onPress={() => setShowFilterOptions(!showFilterOptions)} />
-          {showFilterOptions && (
-            <>
-              <AnimeFilters
-                query={GENRE_QUERY}
-                label="Genre"
-                filterType="genre"
-                canSearch={true}
-                isMulti={true}
-                onValueChange={(value) => { setGenres(value as []) }}
-              />
-              <AnimeFilters
-                label="Year"
-                filterType="year"
-                setSelectedValue={year}
-                canSearch={true}
-                onValueChange={(value) => setYear(value as number)}
-              />
-              <AnimeFilters
-                label="Season"
-                filterType="season"
-                onValueChange={(value => setSeason(value as string))}
-              />
-              <AnimeFilters
-                label="Format"
-                filterType="format"
-                isMulti={true}
-                onValueChange={(value) => setFormats(value as [])}
-              />
-              <AnimeFilters
-                label="Airing Status"
-                filterType="airing-status"
-                onValueChange={(value) => setAiringStatus(value as string)}
-              />
-            </>
-          )}
-        </View>
-      </View>
-      {(searchValue === null && genres === null && year === null && formats === null && airingStatus === null) ? (
+    <>
+      <ScrollView style={Styles.container}>
         <View
         >
+          <Text style={Styles.title}>Browse Anime</Text>
           <View style={Styles.spacer} />
-          <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', }}>
-            <Text style={Styles.HeaderText}>Trending</Text>
-            <Text style={{ color: 'blue' }}>Show All</Text>
+          <View style={{ gap: 5 }}>
+            <View
+              style={Styles.searchInput}
+            >
+              <TextInput
+                style={Styles.searchBar}
+                placeholder="Search animes..."
+                keyboardType="default"
+                value={searchValue as string}
+                onChangeText={(text) => setSearchValue(text)}
+              />
+              <Ionicons
+                name="search"
+                size={26}
+                style={Styles.searchIcon}
+              />
+            </View>
+            <Button title="Filters" onPress={() => setShowFilterOptions(!showFilterOptions)} />
+            {showFilterOptions && (
+              <>
+                <AnimeFilters
+                  query={GENRE_QUERY}
+                  label="Genre"
+                  filterType="genre"
+                  canSearch={true}
+                  isMulti={true}
+                  onValueChange={(value) => { setGenres(value as []) }}
+                />
+                <AnimeFilters
+                  label="Year"
+                  filterType="year"
+                  setSelectedValue={year}
+                  canSearch={true}
+                  onValueChange={(value) => setYear(value as number)}
+                />
+                <AnimeFilters
+                  label="Season"
+                  filterType="season"
+                  setSelectedValue={season}
+                  onValueChange={(value => setSeason(value as string))}
+                />
+                <AnimeFilters
+                  label="Format"
+                  filterType="format"
+                  isMulti={true}
+                  onValueChange={(value) => setFormats(value as [])}
+                />
+                <AnimeFilters
+                  label="Airing Status"
+                  filterType="airing-status"
+                  onValueChange={(value) => setAiringStatus(value as string)}
+                />
+              </>
+            )}
           </View>
-          <GetAnimeCoverArts
-            query={GET_TRENDING_ANIME}
-            variables={{ page: 1, perPage: 5, sort: "TRENDING_DESC", type: "ANIME" }}
-            style={{ flexDirection: 'row', gap: 10 }}
-            isHorizontal={true}
-          />
-          <View style={Styles.spacer} />
-          <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', }}>
-            <Text style={Styles.HeaderText}>Popular This Season</Text>
-            <Text style={{ color: 'blue' }}>Show All</Text>
-          </View>
-          <GetAnimeCoverArts
-            query={GET_POPULAR_THIS_SEASON}
-            variables={{ page: 1, perPage: 5, sort: "POPULARITY_DESC", type: "ANIME", seasonYear: currentYear, status: "RELEASING" }}
-            style={{ flexDirection: 'row', gap: 10 }}
-            isHorizontal={true}
-          />
-          <View style={Styles.spacer} />
-          <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', }}>
-            <Text style={Styles.HeaderText}>All Time Popular</Text>
-            <Text style={{ color: 'blue' }}>Show All</Text>
-          </View>
-          <GetAnimeCoverArts
-            query={GET_ALL_TIME_POPULAR}
-            variables={{ page: 1, perPage: 5, sort: "POPULARITY_DESC", type: "ANIME" }}
-            style={{ flexDirection: 'row', gap: 10 }}
-            isHorizontal={true}
-          />
         </View>
+        {(searchValue === null && genres === null && year === null && formats === null && airingStatus === null && sortFilter === null) ? (
+          <View
+          >
+            <View style={Styles.spacer} />
+            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', }}>
+              <Text style={Styles.HeaderText}>Trending</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSortFilter("TRENDING_DESC");
+                  setFilterTitle("Trending Anime");
+                }}
+              >
+                <Text style={{ color: 'blue' }}>Show All</Text>
+              </TouchableOpacity>
+            </View>
+            <GetAnimeCoverArts
+              query={GET_TRENDING_ANIME}
+              variables={{ page: 1, perPage: 5, sort: "TRENDING_DESC", type: "ANIME" }}
+              style={{ flexDirection: 'row', gap: 10 }}
+              isHorizontal={true}
+            />
+            <View style={Styles.spacer} />
+            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', }}>
+              <Text style={Styles.HeaderText}>Popular This Season</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowFilterOptions(true);
+                  setSortFilter("POPULARITY_DESC");
+                  setFilterTitle("Popular This Season");
+                  setYear(currentYear);
+                  setSeason("SPRING");
+                }}
+              >
+                <Text style={{ color: 'blue' }}>Show All</Text>
+              </TouchableOpacity>
+            </View>
+            <GetAnimeCoverArts
+              query={GET_POPULAR_THIS_SEASON}
+              variables={{ page: 1, perPage: 5, sort: "POPULARITY_DESC", type: "ANIME", seasonYear: currentYear, status: "RELEASING" }}
+              style={{ flexDirection: 'row', gap: 10 }}
+              isHorizontal={true}
+            />
+            <View style={Styles.spacer} />
+            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', }}>
+              <Text style={Styles.HeaderText}>All Time Popular</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSortFilter("POPULARITY_DESC");
+                  setFilterTitle("All Time Popular");
+                }}
+              >
+                <Text style={{ color: 'blue' }}>Show All</Text>
+              </TouchableOpacity>
+            </View>
+            <GetAnimeCoverArts
+              query={GET_ALL_TIME_POPULAR}
+              variables={{ page: 1, perPage: 5, sort: "POPULARITY_DESC", type: "ANIME" }}
+              style={{ flexDirection: 'row', gap: 10 }}
+              isHorizontal={true}
+            />
+          </View>
+        ) : (
+          <View style={{ paddingTop: 10, gap: 5 }}>
+            <Button title="Clear Filters" onPress={() => clearFilters()} />
+            {sortFilter && (
+              <Text style={Styles.HeaderText}>{filterTitle}</Text>
+            )}
+            <GetAnimeCoverArts
+              query={SEARCH_OR_FILTER_ANIME}
+              variables={{
+                type: "ANIME",
+                search: searchValue !== null ? searchValue : undefined,
+                genreIn: (genres && genres.length > 0) ? genres : undefined,
+                seasonYear: year !== null ? year : undefined,
+                season: season !== null ? season : undefined,
+                formatIn: (formats && formats.length > 0) ? formats : undefined,
+                status: airingStatus !== null ? airingStatus : undefined,
+                sort: sortFilter !== null ? sortFilter : undefined
+              }}
+              style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}
+            />
+          </View>
+        )}
+      </ScrollView>
+      {isLoggedIn ? (
+        <NavBar items={navItems.mainNavItems} />
       ) : (
-        <GetAnimeCoverArts
-          query={SEARCH_OR_FILTER_ANIME}
-          variables={{
-            page: 1,
-            perPage: 50,
-            type: "ANIME",
-            search: searchValue !== null ? searchValue : undefined,
-            genreIn: (genres && genres.length > 0) ? genres : undefined,
-            seasonYear: year !== null ? year : undefined,
-            season: season !== null ? season : undefined,
-            formatIn: (formats && formats.length > 0) ? formats : undefined,
-            status: airingStatus !== null ? airingStatus : undefined
-          }}
-          style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}
-        />
+        <NavBar items={navItems.guestNavItems} />
       )}
-    </ScrollView>
+    </>
   );
 }
 
@@ -182,8 +256,9 @@ const Styles = StyleSheet.create({
     fontSize: 24
   },
   container: {
-    paddingTop: 40,
+    paddingTop: 60,
     paddingBottom: 20,
+    marginBottom: 120,
     paddingLeft: 10,
     paddingRight: 10,
     flex: 1,

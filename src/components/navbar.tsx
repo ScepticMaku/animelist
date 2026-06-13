@@ -9,6 +9,7 @@ interface NavItem {
   screenName: string;
   icon?: ImageSourcePropType;
   isButton?: boolean;
+  profileImage?: ImageSourcePropType;
 }
 
 interface NavBarProps {
@@ -17,24 +18,6 @@ interface NavBarProps {
 
 export const NavBar: React.FC<NavBarProps> = ({ items }) => {
   const route = useRoute();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const getCurrentSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (error) {
-        console.error("error getting user session: ", error.message);
-        return;
-      }
-
-      if (data.session !== null) {
-        setIsLoggedIn(true);
-      }
-    }
-
-    getCurrentSession();
-  }, []);
 
   return (
     <View style={Styles.container}>
@@ -66,6 +49,11 @@ export const NavBar: React.FC<NavBarProps> = ({ items }) => {
                 onPress={() => router.navigate('/(auth)/login')}
               />
             )}
+
+            {item.profileImage && (
+              <Image style={[Styles.profileImage, { borderRadius: Styles.profileImage.width / 2 }]} source={item.profileImage} />
+            )}
+
           </TouchableOpacity>
         );
       })}
@@ -75,6 +63,10 @@ export const NavBar: React.FC<NavBarProps> = ({ items }) => {
 
 
 const Styles = StyleSheet.create({
+  profileImage: {
+    height: 50,
+    width: 50,
+  },
   container: {
     flexDirection: 'row',
     backgroundColor: '#ffffff',
