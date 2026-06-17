@@ -95,7 +95,7 @@ export default function PasswordReset() {
 
     setProcessing(false);
     router.push({
-      pathname: '/(main)/dashboard',
+      pathname: '/(main)/library',
       params: { flashMessage: 'Password successfully updated!' }
     });
   }

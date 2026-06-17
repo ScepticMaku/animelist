@@ -20,10 +20,7 @@ export default function Index() {
 
       if (data.session !== null) {
         router.push({
-          pathname: '/(main)/dashboard',
-          params: {
-            flashMessage: 'You are already logged in.'
-          }
+          pathname: '/(main)/library',
         });
       }
     }

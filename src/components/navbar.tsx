@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { StyleSheet, View, Text, TouchableOpacity, Image, ImageSourcePropType, Button } from 'react-native'
 import { useRoute } from '@react-navigation/native'
 import { RelativePathString, router } from 'expo-router';
-import { supabase } from '../utils/supabase';
 
 interface NavItem {
   label?: string;

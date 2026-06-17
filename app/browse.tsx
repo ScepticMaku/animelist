@@ -212,7 +212,7 @@ export default function Browse() {
                 status: airingStatus !== null ? airingStatus : undefined,
                 sort: sortFilter !== null ? sortFilter : undefined
               }}
-              style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}
+              style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 200 }}
             />
           </View>
         )}

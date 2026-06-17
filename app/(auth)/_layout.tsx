@@ -36,7 +36,7 @@ export default function RootLayout() {
 
       if (data.session !== null) {
         router.replace({
-          pathname: '/(main)/dashboard',
+          pathname: '/(main)/library',
           params: { flashMessage: 'You are already logged in.' }
         });
       }

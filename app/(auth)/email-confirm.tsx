@@ -23,7 +23,7 @@ export default function EmailConfirm() {
       (event, session) => {
         if (event === 'SIGNED_IN' && session) {
           router.push({
-            pathname: '/(main)/dashboard',
+            pathname: '/(main)/library',
             params: { flashMessage: 'Successfully logged in!' }
           });
         }
@@ -38,7 +38,7 @@ export default function EmailConfirm() {
       const { data, error } = await supabase.auth.getUser();
       if (data.user !== null) {
         router.push({
-          pathname: '/(main)/dashboard',
+          pathname: '/(main)/library',
           params: { flashMesssage: 'Successfully logged in!' }
         });
       }

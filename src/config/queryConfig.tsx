@@ -113,6 +113,7 @@ query ShowAnimeInfo($mediaId: Int, $isMain: Boolean) {
         }
         title {
           romaji
+          english
         }
         format
         status
@@ -120,6 +121,7 @@ query ShowAnimeInfo($mediaId: Int, $isMain: Boolean) {
     }
     title {
       romaji
+      english
     }
     status
     studios(isMain: $isMain) {

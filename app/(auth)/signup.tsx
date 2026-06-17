@@ -28,7 +28,7 @@ export default function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(true);
   const [processing, setProcessing] = useState(false);
 
-  const redirectUrl = Linking.createURL('/dashboard');
+  const redirectUrl = Linking.createURL('/library');
 
   function validateInput() {
     const errors = {

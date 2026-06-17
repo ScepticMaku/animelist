@@ -102,7 +102,7 @@ export default function Login() {
 
     setProcessing(false);
     router.push({
-      pathname: '/(main)/dashboard',
+      pathname: '/(main)/library',
       params: {
         flashMessage: 'Successfully logged in!'
       }

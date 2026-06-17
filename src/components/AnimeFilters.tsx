@@ -11,7 +11,7 @@ import { useDebounce } from "./UseDebounce";
 interface AnimeFiltersProps {
   query?: DocumentNode;
   label: string;
-  filterType?: 'genre' | 'year' | 'season' | 'format' | 'airing-status';
+  filterType?: 'genre' | 'year' | 'season' | 'format' | 'airing-status' | 'watching-status';
   canSearch?: boolean;
   onValueChange?: (value: string | string[] | null | number) => void;
   isMulti?: boolean;
@@ -54,9 +54,18 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
     "Cancelled"
   ]
 
+  const watchingStatuses = [
+    "Watching",
+    "Plan To Watch",
+    "Completed",
+    "Rewatching",
+    "Paused",
+    "Dropped"
+  ]
+
   const renderLabel = () => {
     return (
-      <Text>
+      <Text style={{ paddingBottom: 5 }}>
         {label}
       </Text>
     );
@@ -112,6 +121,13 @@ export function AnimeFilters({ query, label, filterType, canSearch, onValueChang
         label: status,
         value: status.toUpperCase().replace(/ /g, '_'),
       }));
+    }
+
+    if (filterType === 'watching-status') {
+      return watchingStatuses.map((status) => ({
+        label: status,
+        value: slug(status)
+      }))
     }
 
     return [];
