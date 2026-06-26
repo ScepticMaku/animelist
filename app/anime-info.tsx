@@ -1,16 +1,17 @@
 import { NavBar } from "@/src/components/navbar";
+import { showToast } from "@/src/components/showToast";
 import { navItems } from "@/src/config/navConfig";
 import { GET_ANIME_INFO } from "@/src/config/queryConfig";
 import { supabase } from "@/src/utils/supabase";
 import { useQuery } from "@apollo/client/react";
-import { stripHtml } from 'string-strip-html';
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image } from "expo-image";
+// 🌟 Added router reference for history back steps
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { Modal, Button, ScrollView, StyleSheet, Text, TouchableOpacity, View, Pressable, ActivityIndicator, TextInput } from "react-native";
-import Ionicons from "@expo/vector-icons/Ionicons";
-import { showToast } from "@/src/components/showToast";
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
+import { stripHtml } from 'string-strip-html';
 
 interface AnimeData {
   Media: {
@@ -52,7 +53,6 @@ interface AnimeData {
 }
 
 export default function AnimeInfo() {
-
   const { animeId } = useLocalSearchParams<{ animeId: any }>();
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -198,7 +198,6 @@ export default function AnimeInfo() {
     setModalVisible(false);
   }
 
-
   async function updateAnime(status: string | null, episode: number, note: string) {
     setSaveLoading(true);
 
@@ -247,332 +246,468 @@ export default function AnimeInfo() {
     fetchPolicy: 'network-only'
   });
 
-  if (loading) return <Text>Loading...</Text>
-  if (error) {
-    console.error(error.stack);
-
-    return <Text>Error fetching anime: {error.name}</Text>
-  }
+  if (loading) return <View style={Styles.centered}><ActivityIndicator size="large" color="#3d85f1" /></View>
+  if (error) return <View style={Styles.centered}><Text>Error fetching anime: {error.name}</Text></View>
 
   const anime = data?.Media;
 
   return (
     <>
-      <ScrollView style={Styles.container}>
-        <View>
-          <View style={Styles.mainInfo}>
-            <Image
-              style={Styles.animeCoverSize}
-              source={{ uri: anime?.coverImage.large }}
-            />
+      <ScrollView style={Styles.container} contentContainerStyle={{ paddingBottom: 160 }}>
+        
+        {/* 🌟 Navigation Back Button Control Bar */}
+        <View style={Styles.backButtonContainer}>
+          <TouchableOpacity 
+            style={Styles.backButtonCircle}
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chevron-back" size={22} color="#1e293b" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={Styles.mainInfo}>
+          <Image
+            style={Styles.animeCoverSize}
+            source={{ uri: anime?.coverImage.large }}
+          />
+          <View style={Styles.headerTextContainer}>
+            <Text style={Styles.titleText}>{anime?.title.romaji}</Text>
+            {anime?.title.english && <Text style={Styles.englishTitleText}>{anime?.title.english}</Text>}
+            
             {isLoggedIn && (
-              <View>
-                <Text style={Styles.titleText}>{anime?.title.romaji}</Text>
-                <Text style={Styles.englishTitleText}>{anime?.title.english}</Text>
-                <View style={{ flexDirection: 'row', marginLeft: 5, gap: 5 }}>
-                  {isLoading ? (
-                    <View style={{ width: 200 }}>
-                      <ActivityIndicator />
-                    </View>
-                  ) : (
-                    <>
-                      <View style={{ width: 200 }}>
-                        {userAnime && userAnime.length > 0 ? (
-                          userAnime?.map((anime) => (
-                            <Button key={anime.id} title={anime.anime_statuses.name} onPress={() => setModalVisible(true)} />
-                          ))
-                        ) : (
-                          <Button title='add to list' onPress={() => setModalVisible(true)} />
-                        )}
-                      </View>
-                      <TouchableOpacity
-                        style={Styles.favoriteButton}
-                        onPress={() => toggleFavorite(isFavorite, animeId, userId)}
-                      >
-                        {isFavoriteLoading ? (
-                          <ActivityIndicator color='white' size={32} />
-                        ) : (
-                          <Ionicons name={isFavorite ? 'heart-dislike-circle-outline' : 'heart-circle-outline'} color={'white'} size={32} />
-                        )}
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
+              <View style={Styles.actionRow}>
+                {isLoading ? (
+                  <ActivityIndicator color="#3d85f1" />
+                ) : (
+                  <>
+                    <TouchableOpacity 
+                      style={Styles.customButton} 
+                      onPress={() => setModalVisible(true)}
+                    >
+                      <Text style={Styles.customButtonText}>
+                        {userAnime && userAnime.length > 0 
+                          ? userAnime[0].anime_statuses.name 
+                          : 'Add to List'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[Styles.favoriteButton, isFavorite && Styles.favoriteActive]}
+                      onPress={() => toggleFavorite(isFavorite, animeId, userId)}
+                    >
+                      {isFavoriteLoading ? (
+                        <ActivityIndicator color='white' size={20} />
+                      ) : (
+                        <Ionicons 
+                          name={isFavorite ? 'heart' : 'heart-outline'} 
+                          color='white' 
+                          size={22} 
+                        />
+                      )}
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             )}
-
-            <Modal
-              animationType="slide"
-              visible={modalVisible}
-              onRequestClose={() => setModalVisible(false)}
-              transparent={true}
-            >
-              <View style={Styles.modalOverlay}>
-                <View style={Styles.modalContent}>
-                  <Pressable
-                    onPress={() => setModalVisible(false)}
-                  >
-                    <View>
-                      <Text style={{ fontWeight: 'bold' }}>Add to list</Text>
-                      <View style={Styles.spacer} />
-                      <Text style={{ paddingBottom: 5 }}>Status</Text>
-                      <Dropdown
-                        style={[Styles.dropdown, isFocus && { borderColor: 'blue' }]}
-                        placeholderStyle={Styles.placeholderStyle}
-                        selectedTextStyle={Styles.selectedTextStyle}
-                        inputSearchStyle={Styles.inputSearchStyle}
-                        iconStyle={Styles.iconStyle}
-                        data={animeStatuses}
-                        maxHeight={300}
-                        labelField="label"
-                        valueField="value"
-                        placeholder="Select"
-                        searchPlaceholder="Search..."
-                        value={value}
-                        onFocus={() => setIsFocus(true)}
-                        onBlur={() => setIsFocus(false)}
-                        onChange={item => {
-                          setValue(item.value);
-                          setIsFocus(false);
-                        }}
-                        renderRightIcon={() => (
-                          hasValue ? (
-                            <Ionicons onPress={() => setValue(null)} name="close-outline" size={26} style={{ paddingLeft: 10 }} />
-                          ) : (
-                            <Ionicons name="chevron-down-outline" size={20} style={{ paddingLeft: 10 }} />
-                          )
-                        )}
-                      />
-                      <View style={Styles.spacer} />
-                      <Text style={{ paddingBottom: 5 }}>Episode Progress</Text>
-                      <TextInput
-                        style={Styles.textInput}
-                        value={episodeValue}
-                        onChangeText={setEpisodeValue}
-                        keyboardType="number-pad"
-                      />
-                      <View style={Styles.spacer} />
-                      <Text style={{ paddingBottom: 5 }}>Note</Text>
-                      <TextInput
-                        style={Styles.textInput}
-                        multiline={true}
-                        keyboardType="default"
-                        value={noteValue}
-                        onChangeText={setNoteValue}
-                      />
-                      <View style={Styles.spacer} />
-                      {userAnime && userAnime.length > 0 ? (
-                        <View style={{ gap: 5 }}>
-                          {saveLoading ? (
-                            <ActivityIndicator />
-                          ) : (
-                            <Button
-                              onPress={() => updateAnime(value, parseInt(episodeValue), noteValue)}
-                              title="update"
-                            />
-                          )}
-                          {deleteLoading ? (
-                            <ActivityIndicator />
-                          ) : (
-                            <Button
-                              color="#C80815"
-                              onPress={() => deleteAnime()}
-                              title="delete"
-                            />
-                          )}
-                        </View>
-                      ) : (
-                        saveLoading ? (
-                          <ActivityIndicator />
-                        ) : (
-                          <Button
-                            onPress={() => saveAnime(value, parseInt(episodeValue), noteValue)}
-                            title="save"
-                          />
-                        )
-                      )}
-                    </View>
-                  </Pressable>
-                </View>
-              </View>
-            </Modal>
-
           </View>
-          <View style={Styles.spacer} />
-          <Text style={Styles.descriptionText}>{stripHtml(anime?.description || '').result}</Text>
         </View>
-        <View style={Styles.spacer} />
-        <View style={Styles.additionalInfo}>
-          <View style={Styles.miscInfo}>
-            <Text style={{ fontWeight: 'bold' }}>Format</Text>
-            <Text>{anime?.format}</Text>
-            <Text style={{ fontWeight: 'bold' }}>Episodes</Text>
-            <Text>{anime?.episodes}</Text>
-            <Text style={{ fontWeight: 'bold' }}>Episode Duration</Text>
-            <Text>{anime?.duration}</Text>
-            <Text style={{ fontWeight: 'bold' }}>Status</Text>
-            <Text>{anime?.status}</Text>
-            <Text style={{ fontWeight: 'bold' }}>Season</Text>
-            <Text>{anime?.season}</Text>
-            <Text style={{ fontWeight: 'bold' }}>Average Score</Text>
-            <Text>{anime?.averageScore}</Text>
-            <Text style={{ fontWeight: 'bold' }}>Studios</Text>
-            {anime && anime?.studios.nodes.map((n) => (
-              <Text key={n.name}>{n.name}</Text>
-            ))}
-          </View>
-          <View style={Styles.genreInfo}>
-            <Text style={{ fontWeight: 'bold' }}>Genres</Text>
-            <View style={Styles.genres}>
-              {anime && anime?.genres.map((g) => (
-                <Text key={g}>{g}</Text>
-              ))}
+
+        <View style={Styles.divider} />
+        
+        <Text style={Styles.sectionTitle}>Description</Text>
+        <Text style={Styles.descriptionText}>{stripHtml(anime?.description || '').result}</Text>
+
+        <View style={Styles.divider} />
+
+        <Text style={Styles.sectionTitle}>Genres</Text>
+        <View style={Styles.genresContainer}>
+          {anime?.genres.map((g) => (
+            <View key={g} style={Styles.genreTag}>
+              <Text style={Styles.genreText}>{g}</Text>
             </View>
-          </View>
+          ))}
         </View>
-        <View style={Styles.spacer} />
-        <Text style={{ fontWeight: 'bold', paddingBottom: 5 }}>Relations</Text>
-        <View style={Styles.relations}>
-          {anime?.relations.nodes.map((anime) => (
-            <View
-              key={anime.id}
-            >
+
+        <View style={Styles.divider} />
+
+        <Text style={Styles.sectionTitle}>Details</Text>
+        <View style={Styles.gridContainer}>
+          <View style={Styles.gridItem}><Text style={Styles.gridLabel}>Format</Text><Text style={Styles.gridValue}>{anime?.format || '-'}</Text></View>
+          <View style={Styles.gridItem}><Text style={Styles.gridLabel}>Episodes</Text><Text style={Styles.gridValue}>{anime?.episodes || '-'}</Text></View>
+          <View style={Styles.gridItem}><Text style={Styles.gridLabel}>Duration</Text><Text style={Styles.gridValue}>{anime?.duration ? `${anime.duration}m` : '-'}</Text></View>
+          <View style={Styles.gridItem}><Text style={Styles.gridLabel}>Status</Text><Text style={Styles.gridValue}>{anime?.status || '-'}</Text></View>
+          <View style={Styles.gridItem}><Text style={Styles.gridLabel}>Season</Text><Text style={Styles.gridValue}>{anime?.season || '-'}</Text></View>
+          <View style={Styles.gridItem}><Text style={Styles.gridLabel}>Score</Text><Text style={Styles.gridValue}>⭐ {anime?.averageScore ? `${anime.averageScore}%` : '-'}</Text></View>
+        </View>
+
+        {anime?.studios?.nodes && anime.studios.nodes.length > 0 && (
+          <View style={{ marginTop: 15 }}>
+            <Text style={Styles.gridLabel}>Studios</Text>
+            <Text style={Styles.gridValue}>{anime.studios.nodes.map(n => n.name).join(', ')}</Text>
+          </View>
+        )}
+
+        <View style={Styles.divider} />
+        
+        <Text style={Styles.sectionTitle}>Relations</Text>
+        <View style={Styles.relationsGrid}>
+          {anime?.relations.nodes.map((relation) => (
+            <View key={relation.id} style={Styles.relationCard}>
               <Image
-                style={Styles.animeCoverSize}
-                source={{
-                  uri: anime.coverImage.large
-                }} />
-              <Text style={{ width: 123 }}>{anime.title.romaji}</Text>
-              <Text style={{ fontSize: 12 }}>{anime.format} - {anime.status}</Text>
+                style={Styles.relationCover}
+                source={{ uri: relation.coverImage.large }} 
+              />
+              <View style={Styles.relationMeta}>
+                <Text numberOfLines={2} style={Styles.relationTitle}>{relation.title.romaji}</Text>
+                <Text style={Styles.relationSub}>{relation.format} • {relation.status}</Text>
+              </View>
             </View>
           ))}
         </View>
       </ScrollView>
-      {isLoggedIn ? (
-        <NavBar items={navItems.mainNavItems} />
-      ) : (
-        <NavBar items={navItems.guestNavItems} />
-      )}
 
+      <Modal
+        animationType="fade"
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+        transparent={true}
+      >
+        <View style={Styles.modalOverlay}>
+          <View style={Styles.modalContent}>
+            <View style={Styles.modalHeader}>
+              <Text style={Styles.modalTitle}>Update Tracker</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={Styles.inputLabel}>Status</Text>
+            <Dropdown
+              style={[Styles.dropdown, isFocus && { borderColor: '#3d85f1' }]}
+              placeholderStyle={Styles.placeholderStyle}
+              selectedTextStyle={Styles.selectedTextStyle}
+              data={animeStatuses}
+              maxHeight={300}
+              labelField="label"
+              valueField="value"
+              placeholder="Select Status"
+              value={value}
+              onFocus={() => setIsFocus(true)}
+              onBlur={() => setIsFocus(false)}
+              onChange={item => {
+                setValue(item.value);
+                setIsFocus(false);
+              }}
+            />
+
+            <Text style={Styles.inputLabel}>Episode Progress</Text>
+            <TextInput
+              style={Styles.textInput}
+              value={episodeValue}
+              onChangeText={setEpisodeValue}
+              keyboardType="number-pad"
+            />
+
+            <Text style={Styles.inputLabel}>Notes</Text>
+            <TextInput
+              style={[Styles.textInput, { height: 80, textAlignVertical: 'top', paddingTop: 10 }]}
+              multiline={true}
+              value={noteValue}
+              onChangeText={setNoteValue}
+            />
+
+            <View style={{ marginTop: 20, gap: 10 }}>
+              {userAnime && userAnime.length > 0 ? (
+                <>
+                  <TouchableOpacity 
+                    style={Styles.btnUpdate} 
+                    onPress={() => updateAnime(value, parseInt(episodeValue), noteValue)}
+                  >
+                    {saveLoading ? <ActivityIndicator color="white" /> : <Text style={Styles.btnText}>Update Changes</Text>}
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={Styles.btnDelete} 
+                    onPress={() => deleteAnime()}
+                  >
+                    {deleteLoading ? <ActivityIndicator color="white" /> : <Text style={Styles.btnText}>Remove from List</Text>}
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity 
+                  style={Styles.btnSave} 
+                  onPress={() => saveAnime(value, parseInt(episodeValue), noteValue)}
+                >
+                  {saveLoading ? <ActivityIndicator color="white" /> : <Text style={Styles.btnText}>Save Tracker</Text>}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <NavBar items={isLoggedIn ? navItems.mainNavItems : navItems.guestNavItems} />
     </>
   );
 }
 
 const Styles = StyleSheet.create({
-  label: {
-    position: 'absolute',
-    backgroundColor: 'white',
-    left: 22,
-    top: 8,
-    zIndex: 999,
-    paddingHorizontal: 8,
-    fontSize: 14,
-  },
-  placeholderStyle: {
-    fontSize: 16,
-  },
-  selectedTextStyle: {
-    fontSize: 16,
-  },
-  iconStyle: {
-    width: 20,
-    height: 20,
-  },
-  inputSearchStyle: {
-    height: 40,
-    fontSize: 16,
-  },
-  dropdown: {
-    height: 50,
-    borderColor: 'gray',
-    borderWidth: 0.5,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',              // Prevents it from taking full width
-    shadowColor: '#000',       // Optional: Adds a nice shadow
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,              // Shadow for Android
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',  // Centers the modal vertically
-    alignItems: 'center',      // Centers the modal horizontally
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Dims the screen behind the modal
-  },
-  addModal: {
-  },
-  spacer: {
-    height: 20
-  },
-  animeCoverSize: {
-    width: 123,
-    height: 210,
-    borderRadius: 5
-  },
   container: {
-    paddingTop: 60,
-    paddingBottom: 20,
-    marginBottom: 120,
-    paddingLeft: 10,
-    marginRight: 10,
+    paddingTop: 50,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
     flex: 1,
+  },
+  // 🌟 Clean UI styles for Back navigation button layout
+  backButtonContainer: {
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButtonCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc'
   },
   mainInfo: {
     flexDirection: 'row',
-    paddingBottom: 5
+    gap: 16,
+    marginTop: 4,
+  },
+  animeCoverSize: {
+    width: 110,
+    height: 165,
+    borderRadius: 12,
+    backgroundColor: '#cbd5e1',
+  },
+  headerTextContainer: {
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   titleText: {
-    flexWrap: 'wrap',
-    fontWeight: 'bold',
-    paddingBottom: 5,
-    paddingLeft: 5
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+    lineHeight: 26,
+    marginBottom: 4,
   },
   englishTitleText: {
-    flex: 1,
-    paddingLeft: 5,
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 12,
   },
-  descriptionText: {
-    flex: 1,
-    flexWrap: 'wrap'
-  },
-  additionalInfo: {
+  actionRow: {
     flexDirection: 'row',
-    gap: 20,
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 'auto',
+    marginBottom: 4,
   },
-  miscInfo: {
-
+  customButton: {
+    backgroundColor: '#3d85f1',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 24,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  genreInfo: {
-  },
-  genres: {
-  },
-  genreTag: {
-    marginRight: 8,
-    marginBottom: 8
-  },
-  relations: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingBottom: 200
+  customButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
   },
   favoriteButton: {
-    backgroundColor: '#E66386',
-    borderRadius: 3
+    backgroundColor: '#94a3b8',
+    height: 40,
+    width: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  addButton: {
-    width: 200,
+  favoriteActive: {
+    backgroundColor: '#e11d48',
   },
+  divider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 8,
+  },
+  descriptionText: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 22,
+  },
+  genresContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  genreTag: {
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  genreText: {
+    fontSize: 12,
+    color: '#334155',
+    fontWeight: '600',
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 12,
+    columnGap: '4%',
+  },
+  gridItem: {
+    width: '48%',
+    backgroundColor: '#ffffff',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  gridLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginBottom: 2,
+  },
+  gridValue: {
+    fontSize: 14,
+    color: '#1e293b',
+    fontWeight: '600',
+  },
+  relationsGrid: {
+    gap: 10,
+  },
+  relationCard: {
+    flexDirection: 'row',
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  relationCover: {
+    width: 50,
+    height: 75,
+    backgroundColor: '#cbd5e1',
+  },
+  relationMeta: {
+    flex: 1,
+    padding: 10,
+    justifyContent: 'center',
+  },
+  relationTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  relationSub: {
+    fontSize: 11,
+    color: '#64748b',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    padding: 24,
+    borderRadius: 16,
+    width: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  dropdown: {
+    height: 44,
+    borderColor: '#cbd5e1',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#f8fafc',
+  },
+  placeholderStyle: { fontSize: 14, color: '#94a3b8' },
+  selectedTextStyle: { fontSize: 14, color: '#1e293b' },
   textInput: {
-    borderRadius: 5,
-    borderStyle: "solid",
-    borderWidth: 1
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    paddingHorizontal: 12,
+    fontSize: 14,
+    backgroundColor: '#f8fafc',
+    color: '#1e293b',
   },
-})
+  btnSave: { 
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    backgroundColor: '#3d85f1' 
+  },
+  btnUpdate: { 
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    backgroundColor: '#10b981' 
+  },
+  btnDelete: { 
+    height: 44,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    backgroundColor: '#ef4444' 
+  },
+  btnText: { color: '#ffffff', fontWeight: '700', fontSize: 14 },
+});

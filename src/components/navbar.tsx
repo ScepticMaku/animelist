@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react'
-import { StyleSheet, View, Text, TouchableOpacity, Image, ImageSourcePropType, Button } from 'react-native'
-import { useRoute } from '@react-navigation/native'
+import { useRoute } from '@react-navigation/native';
 import { RelativePathString, router } from 'expo-router';
+import React from 'react';
+import { Button, Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface NavItem {
   label?: string;
@@ -79,7 +79,7 @@ const Styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 100,
+    height: 80,
   },
   navButton: {
     alignItems: 'center',

@@ -132,3 +132,19 @@ query ShowAnimeInfo($mediaId: Int, $isMain: Boolean) {
   }
 }
 `
+
+export const GET_USER_LIST_DETAILS = gql`
+  query ($ids: [Int]) {
+    Page(page: 1, perPage: 10) { # Limits to 10 items for dashboard preview
+      media(id_in: $ids) {
+        id
+        title {
+          romaji
+        }
+        coverImage {
+          large
+        }
+      }
+    }
+  }
+`;

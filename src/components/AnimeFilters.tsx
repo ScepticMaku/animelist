@@ -1,7 +1,7 @@
-import { DocumentNode, gql, OperationVariables, TypedDocumentNode } from "@apollo/client";
+import { DocumentNode } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Dropdown, MultiSelect } from 'react-native-element-dropdown';
 import slugify from 'slugify';
