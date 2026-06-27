@@ -21,7 +21,7 @@ export default function Browse() {
   const [sortFilter, setSortFilter] = useState<string | null>(null);
   const [filterTitle, setFilterTitle] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+
   // 🌟 Format Changer State for Browse Page
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -68,7 +68,7 @@ export default function Browse() {
       <ScrollView style={Styles.container} showsVerticalScrollIndicator={false}>
         <View style={Styles.headerWrapper}>
           <Text style={Styles.title}>Browse Anime</Text>
-          
+
           {/* Main Search Row */}
           <View style={Styles.searchRow}>
             <View style={Styles.searchFieldContainer}>
@@ -81,22 +81,22 @@ export default function Browse() {
                 onChangeText={(text) => setSearchValue(text || null)}
               />
             </View>
-            
+
             {/* 🌟 Dynamic Format Changer Interchange Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={Styles.controlActionRowButton}
               onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
               activeOpacity={0.7}
             >
-              <Ionicons 
-                name={viewMode === 'grid' ? "list" : "grid"} 
-                size={20} 
-                color="#3d85f1" 
+              <Ionicons
+                name={viewMode === 'grid' ? "list" : "grid"}
+                size={20}
+                color="#3d85f1"
               />
             </TouchableOpacity>
 
             {/* Elegant Filter Drawer Toggle Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[Styles.filterToggleButton, showFilterOptions && Styles.filterToggleButtonActive]}
               onPress={() => setShowFilterOptions(!showFilterOptions)}
               activeOpacity={0.7}
@@ -121,8 +121,8 @@ export default function Browse() {
                 )}
               </View>
 
-              <ScrollView 
-                horizontal 
+              <ScrollView
+                horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={Styles.filterScrollTrack}
               >
@@ -257,7 +257,7 @@ export default function Browse() {
                 <Text style={Styles.clearButtonInlineText}>Clear Filters</Text>
               </TouchableOpacity>
             </View>
-            
+
             <GetAnimeCoverArts
               query={SEARCH_OR_FILTER_ANIME}
               variables={{
@@ -328,7 +328,7 @@ const Styles = StyleSheet.create({
     fontSize: 15,
     color: '#1e293b',
   },
-  
+
   // 🌟 Shared Styles for formatting button configuration
   controlActionRowButton: {
     height: 46,
@@ -425,7 +425,7 @@ const Styles = StyleSheet.create({
     fontSize: 14,
   },
   resultsSection: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 5,
     marginTop: 16,
     paddingBottom: 150
   },

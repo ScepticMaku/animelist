@@ -75,7 +75,11 @@ const mapStatusToDbId = (status: string | null): number | null => {
   }
 };
 
+
+
 export default function Browse() {
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [favoriteAnimeIds, setFavoriteAnimeIds] = useState<number[]>([]);
   const [watchingStatus, setWatchingStatus] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState<string | null>(null);
   const [genres, setGenres] = useState<string[] | null>(null);
@@ -83,12 +87,14 @@ export default function Browse() {
   const [year, setYear] = useState<number | null>(null);
   const [showFilterOptions, setShowFilterOptions] = useState(false);
   const [season, setSeason] = useState<string | null>(null);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [airingStatus, setAiringStatus] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [baseAnimeIds, setBaseAnimeIds] = useState<number[]>([]);
   const [supabaseLoading, setSupabaseLoading] = useState(true);
+
 
   useEffect(() => {
     if (showFilterOptions === false || (genres && genres.length === 0)) setGenres(null);
@@ -127,7 +133,7 @@ export default function Browse() {
 
         const { data, error } = await query;
         if (error) throw error;
-        
+
         if (data) {
           const ids = data.map((item: any) => parseInt(item.anime_id));
           setBaseAnimeIds(ids);
@@ -153,6 +159,36 @@ export default function Browse() {
     setFormats(null);
     setAiringStatus(null);
     setShowFilterOptions(false);
+    setShowFavorites(false);
+  };
+
+  const fetchFavoriteIds = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) return;
+
+    const { data } = await supabase
+      .from("user_anime_favorites")
+      .select("anime_id")
+      .eq("user_id", sessionData.session.user.id);
+
+    if (data) {
+      const ids = data.map(item => parseInt(item.anime_id));
+      setFavoriteAnimeIds(ids);
+    }
+  };
+
+  const handleToggleFavorites = async () => {
+    if (!showFavorites) {
+      setFavoritesLoading(true); // Start loading
+      try {
+        await fetchFavoriteIds();
+      } catch (error) {
+        console.error('Failed to fetch favorites:', error);
+      } finally {
+        setFavoritesLoading(false); // Stop loading
+      }
+    }
+    setShowFavorites(!showFavorites);
   };
 
   const hasActiveFilters = searchValue !== null || watchingStatus !== null || genres !== null || year !== null || season !== null || formats !== null || airingStatus !== null;
@@ -162,7 +198,7 @@ export default function Browse() {
       <ScrollView style={Styles.container} showsVerticalScrollIndicator={false}>
         <View style={Styles.headerWrapper}>
           <Text style={Styles.title}>Library</Text>
-          
+
           <View style={Styles.searchRow}>
             <View style={Styles.searchFieldContainer}>
               <Ionicons name="search" size={20} style={Styles.searchInnerIcon} />
@@ -174,8 +210,8 @@ export default function Browse() {
                 onChangeText={(text) => setSearchValue(text || null)}
               />
             </View>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={Styles.controlActionRowButton}
               onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
               activeOpacity={0.7}
@@ -183,7 +219,7 @@ export default function Browse() {
               <Ionicons name={viewMode === 'grid' ? "list" : "grid"} size={20} color="#3d85f1" />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[Styles.filterToggleButton, showFilterOptions && Styles.filterToggleButtonActive]}
               onPress={() => setShowFilterOptions(!showFilterOptions)}
               activeOpacity={0.7}
@@ -215,8 +251,11 @@ export default function Browse() {
           )}
         </View>
 
-        <UserWatchlist 
-          animeIds={baseAnimeIds}
+        <UserWatchlist
+          animeIds={showFavorites ? favoriteAnimeIds : baseAnimeIds}
+          showFavorites={showFavorites}
+          onToggleFavorites={handleToggleFavorites}
+          favoritesLoading={favoritesLoading}
           supabaseLoading={supabaseLoading}
           viewMode={viewMode}
           filterVariables={{
@@ -250,15 +289,21 @@ interface WatchlistProps {
     format: string[] | null;
     status: string | null;
   };
+  showFavorites: boolean;
+  onToggleFavorites: () => void;
+  favoritesLoading: boolean;
 }
 
-function UserWatchlist({ animeIds, supabaseLoading, filterVariables, hasActiveFilters, clearFilters, viewMode }: WatchlistProps) {
-  // 🌟 FIX: We only want to skip the request if Supabase is still actively fetching the IDs.
-  // If Supabase finished loading, we let Apollo fire OR handle an empty array check instantly.
-  const shouldSkipQuery = supabaseLoading;
+function UserWatchlist({ animeIds, supabaseLoading, filterVariables, hasActiveFilters, clearFilters, viewMode, showFavorites, onToggleFavorites, favoritesLoading }: WatchlistProps) {
+
+  // 🌟 FIX 1: Skip if EITHER Supabase OR Favorites is loading
+  const shouldSkipQuery = supabaseLoading || favoritesLoading;
+
+  // 🌟 FIX 2: Generate a unique key based on animeIds to force refetch
+  const queryKey = animeIds.join('-') + '-' + JSON.stringify(filterVariables);
 
   const { loading: aniListLoading, data } = useQuery<AniListDashboardResponse>(GET_FILTERED_USER_LIST, {
-    variables: { 
+    variables: {
       ids: animeIds.length > 0 ? animeIds : [-1], // Fallback token item to prevent crashing dynamic GraphQL array parsers
       search: filterVariables.search || undefined,
       genres: filterVariables.genres?.length ? filterVariables.genres : undefined,
@@ -268,9 +313,11 @@ function UserWatchlist({ animeIds, supabaseLoading, filterVariables, hasActiveFi
       status: filterVariables.status || undefined
     },
     skip: shouldSkipQuery,
+    fetchPolicy: 'cache-and-network'
   });
 
-  if (supabaseLoading || (aniListLoading && animeIds.length > 0)) {
+
+  if (supabaseLoading || favoritesLoading || (aniListLoading && animeIds.length > 0)) {
     return <ActivityIndicator size="small" color="#3d85f1" style={{ marginVertical: 40 }} />;
   }
 
@@ -282,25 +329,25 @@ function UserWatchlist({ animeIds, supabaseLoading, filterVariables, hasActiveFi
     <View style={Styles.feedSection}>
       <View style={Styles.sectionHeaderRow}>
         <Text style={Styles.HeaderText}>
-          {hasActiveFilters ? "Filtered" : "My Watchlist"} ({animeList.length})
+          {hasActiveFilters ? "Filtered" : showFavorites ? "My Favorites" : "My Watchlist"} ({animeList.length})
         </Text>
-        
+
         <View style={Styles.headerActionsWrapper}>
           {hasActiveFilters ? (
             <TouchableOpacity style={Styles.clearButtonInline} onPress={clearFilters}>
               <Text style={Styles.clearButtonInlineText}>Clear</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={() => router.push("/mylist" as any)}>
-              <Text style={Styles.showAllText}>Show All</Text>
+            <TouchableOpacity onPress={onToggleFavorites}>
+              <Text style={[Styles.showAllText, showFavorites && Styles.activeFavoritesText]}>{showFavorites ? 'Back to Watchlist' : 'Show Favorites'}</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      <ScrollView 
-        horizontal={isGrid} 
-        showsHorizontalScrollIndicator={false} 
+      <ScrollView
+        horizontal={isGrid}
+        showsHorizontalScrollIndicator={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={isGrid ? Styles.scrollContainer : Styles.listScrollContainer}
       >
@@ -313,11 +360,11 @@ function UserWatchlist({ animeIds, supabaseLoading, filterVariables, hasActiveFi
               style={isGrid ? Styles.animeCard : Styles.animeCardListRow}
               onPress={() => router.push({ pathname: "/anime-info" as any, params: { animeId: anime.id } })}
             >
-              <Image 
-                source={{ uri: anime.coverImage.large }} 
-                style={isGrid ? Styles.coverImage : Styles.coverImageList} 
+              <Image
+                source={{ uri: anime.coverImage.large }}
+                style={isGrid ? Styles.coverImage : Styles.coverImageList}
               />
-              
+
               {isGrid ? (
                 <View style={Styles.textOverlay}>
                   <Text numberOfLines={2} style={Styles.animeTitle}>
@@ -350,7 +397,7 @@ const Styles = StyleSheet.create({
   searchFieldContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderRadius: 12, borderWidth: 1, borderColor: "#e2e8f0" },
   searchInnerIcon: { paddingLeft: 12, color: "#94a3b8" },
   searchBar: { flex: 1, height: 46, paddingHorizontal: 10, fontSize: 15, color: '#1e293b' },
-  
+
   controlActionRowButton: {
     height: 46,
     width: 46,
@@ -368,7 +415,7 @@ const Styles = StyleSheet.create({
   },
   filterToggleButton: { height: 46, width: 46, backgroundColor: '#ffffff', borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
   filterToggleButtonActive: { backgroundColor: '#3d85f1', borderColor: '#3d85f1' },
-  
+
   filterPanelCard: { marginTop: 14, backgroundColor: '#ffffff', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#e2e8f0' },
   filterPanelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   filterPanelTitle: { fontSize: 12, fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.8 },
@@ -382,7 +429,7 @@ const Styles = StyleSheet.create({
   clearButtonInline: { backgroundColor: '#fff1f2', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 },
   clearButtonInlineText: { color: '#f43f5e', fontWeight: '700', fontSize: 12 },
   scrollContainer: { gap: 12, paddingRight: 20 },
-  
+
   headerActionsWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -392,7 +439,7 @@ const Styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 20,
   },
-  animeCard: { 
+  animeCard: {
     width: 110, height: 165, borderRadius: 12, overflow: "hidden", backgroundColor: "#e2e8f0", position: 'relative',
     borderWidth: 1, borderColor: '#e2e8f0', shadowColor: '#000000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
@@ -429,5 +476,9 @@ const Styles = StyleSheet.create({
   },
   textOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(11, 15, 26, 0.82)", paddingVertical: 10, paddingHorizontal: 6, borderTopWidth: 0.5, borderColor: 'rgba(255, 255, 255, 0.1)' },
   animeTitle: { color: "#ffffff", fontSize: 11, fontWeight: "700", textAlign: "center", letterSpacing: -0.2 },
-  emptyText: { color: "#64748b", fontSize: 13, paddingVertical: 20 }
+  emptyText: { color: "#64748b", fontSize: 13, paddingVertical: 20 },
+  activeFavoritesText: {
+    color: '#f59e0b',
+    fontWeight: '700'
+  }
 });

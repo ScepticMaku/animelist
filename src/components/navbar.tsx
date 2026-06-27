@@ -63,8 +63,8 @@ export const NavBar: React.FC<NavBarProps> = ({ items }) => {
 
 const Styles = StyleSheet.create({
   profileImage: {
-    height: 50,
-    width: 50,
+    height: 40,
+    width: 40,
   },
   container: {
     flexDirection: 'row',
