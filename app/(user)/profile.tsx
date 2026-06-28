@@ -36,10 +36,56 @@ export default function Profile() {
   const [newUsername, setNewUsername] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
 
+  const [aiRecommendations, setAiRecommendations] = useState<any[] | null>(null);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [showAIError, setShowAIError] = useState(false);
+
   // Fetch user activities and profile on mount
   useEffect(() => {
     fetchUserData();
   }, []);
+
+  async function fetchAIRecommendations() {
+    setIsLoadingAI(true);
+    setShowAIError(false);
+
+    try {
+      // Get user's anime list from Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const { data: userAnimes } = await supabase
+        .from('user_animes')
+        .select(`
+        *,
+        anime_info:anime_id (
+          title,
+          status,
+          score,
+          genres
+        )
+      `)
+        .eq('user_id', user!.id);
+
+      // Call our Edge Function (FREE Gemini API)
+      const { data, error } = await supabase.functions.invoke('ai-recommendations', {
+        body: {
+          userAnimeList: userAnimes || [],
+          userPreferences: null // Could add "likes action anime" etc.
+        }
+      });
+
+      if (error) throw error;
+
+      setAiRecommendations(data.recommendations);
+
+    } catch (error) {
+      console.error('AI Error:', error);
+      setShowAIError(true);
+      showToast('Failed to get AI recommendations');
+    } finally {
+      setIsLoadingAI(false);
+    }
+  }
 
   async function fetchUserData() {
     setIsLoading(true);
@@ -431,6 +477,107 @@ export default function Profile() {
                 recentActivityCount > 0 ? '📊 Moderate' : '😴 Quiet'}
           </Text>
         </View>
+      </View>
+
+      {/* 🤖 AI RECOMMENDATIONS CARD */}
+      <View style={Styles.dashboardCard}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="sparkles" size={20} color="#8b5cf6" />
+            <Text style={Styles.cardSectionTitle}>AI Recommendations</Text>
+          </View>
+
+          {!aiRecommendations && !isLoadingAI && (
+            <TouchableOpacity
+              style={Styles.generateButton}
+              onPress={fetchAIRecommendations}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="color-wand-outline" size={14} color="#ffffff" />
+              <Text style={Styles.generateButtonText}>Generate</Text>
+            </TouchableOpacity>
+          )}
+
+          {aiRecommendations && (
+            <TouchableOpacity
+              onPress={fetchAIRecommendations}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="refresh" size={18} color="#8b5cf6" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Loading State */}
+        {isLoadingAI && (
+          <View style={Styles.aiLoadingContainer}>
+            <ActivityIndicator size="large" color="#8b5cf6" />
+            <Text style={Styles.aiLoadingText}>
+              AI is analyzing your taste...
+            </Text>
+            <Text style={Styles.aiSubtext}>
+              This uses free Gemini AI ✨
+            </Text>
+          </View>
+        )}
+
+        {/* Error State */}
+        {showAIError && (
+          <View style={Styles.aiErrorContainer}>
+            <Ionicons name="warning" size={32} color="#ef4444" />
+            <Text style={Styles.aiErrorText}>Failed to generate</Text>
+            <TouchableOpacity style={Styles.retryButton} onPress={fetchAIRecommendations}>
+              <Text style={Styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Empty State (before generation) */}
+        {!aiRecommendations && !isLoadingAI && !showAIError && (
+          <View style={Styles.aiEmptyContainer}>
+            <Ionicons name="bulb-outline" size={48} color="#e2e8f0" />
+            <Text style={Styles.aiEmptyTitle}>Get personalized picks</Text>
+            <Text style={Styles.aiEmptySubtitle}>
+              Our AI will analyze your watching history and suggest anime you'll love
+            </Text>
+            <Text style={Styles.aiFreeBadge}>✨ 100% FREE • Powered by Gemini</Text>
+          </View>
+        )}
+
+        {/* Recommendations Display */}
+        {aiRecommendations && !isLoadingAI && (
+          <View style={Styles.recommendationsList}>
+            {aiRecommendations.map((rec: any, index: number) => (
+              <View key={index} style={Styles.recommendationCard}>
+                <View style={Styles.recHeader}>
+                  <View style={Styles.recNumber}>
+                    <Text style={Styles.recNumberText}>{index + 1}</Text>
+                  </View>
+                  <View style={Styles.recInfo}>
+                    <Text style={Styles.recTitle}>{rec.title}</Text>
+                    <View style={Styles.recGenres}>
+                      {rec.genres?.map((genre: string, i: number) => (
+                        <View key={i} style={Styles.genrePill}>
+                          <Text style={Styles.genrePillText}>{genre}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                  <View style={[Styles.matchScore, { backgroundColor: rec.matchScore >= 90 ? '#22c55e' : rec.matchScore >= 80 ? '#3b82f6' : '#f59e0b' }]}>
+                    <Text style={Styles.matchScoreText}>{rec.matchScore}%</Text>
+                  </View>
+                </View>
+
+                <Text style={Styles.recReason}>{rec.reason}</Text>
+                <Text style={Styles.recWhyFits}>💡 {rec.whyItFits}</Text>
+              </View>
+            ))}
+
+            <Text style={Styles.aiDisclaimer}>
+              AI suggestions may not be perfect. Powered by Google Gemini (free tier)
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* 📝 RECENT ACTIVITY LIST */}
@@ -837,5 +984,172 @@ const Styles = StyleSheet.create({
     color: '#94a3b8',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  generateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#8b5cf6',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    gap: 4,
+  },
+  generateButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  aiLoadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 12,
+  },
+  aiLoadingText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  aiSubtext: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  aiEmptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  aiEmptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#334155',
+    marginTop: 8,
+  },
+  aiEmptySubtitle: {
+    fontSize: 13,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 18,
+    paddingHorizontal: 10,
+  },
+  aiFreeBadge: {
+    fontSize: 11,
+    color: '#8b5cf6',
+    fontWeight: '600',
+    marginTop: 4,
+    backgroundColor: '#f5f3ff',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  aiErrorContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  aiErrorText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ef4444',
+    marginTop: 4,
+  },
+  retryButton: {
+    backgroundColor: '#fef2f2',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    marginTop: 4,
+  },
+  retryButtonText: {
+    color: '#ef4444',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  recommendationsList: {
+    gap: 16,
+  },
+  recommendationCard: {
+    backgroundColor: '#fafafa',
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  recHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  recNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#8b5cf6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recNumberText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  recInfo: {
+    flex: 1,
+  },
+  recTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  recGenres: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  genrePill: {
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  genrePillText: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  matchScore: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  matchScoreText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  recReason: {
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
+    marginBottom: 6,
+  },
+  recWhyFits: {
+    fontSize: 12,
+    color: '#64748b',
+    fontStyle: 'italic',
+    lineHeight: 17,
+  },
+  aiDisclaimer: {
+    fontSize: 11,
+    color: '#94a3b8',
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
 });
