@@ -140,7 +140,13 @@ export default function AnimeInfo() {
     getCurrentSession();
   }, [setIsLoggedIn, setIsLoading, setUserId, setIsFavorite]);
 
-
+  const toTitleCase = (str: string): string => {
+    return str
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   async function logActivity({ userId, animeId, description }: ActivityLogData) {
     if (!userId) {
@@ -408,7 +414,7 @@ export default function AnimeInfo() {
                     >
                       <Text style={Styles.customButtonText}>
                         {userAnime && userAnime.length > 0
-                          ? userAnime[0].anime_statuses.name
+                          ? toTitleCase(userAnime[0].anime_statuses.name)
                           : 'Add to List'}
                       </Text>
                     </TouchableOpacity>
@@ -579,6 +585,7 @@ const Styles = StyleSheet.create({
     paddingHorizontal: 16,
     backgroundColor: '#f8fafc',
     flex: 1,
+    marginBottom: 60
   },
   // 🌟 Clean UI styles for Back navigation button layout
   backButtonContainer: {

@@ -286,6 +286,7 @@ const Styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
     paddingTop: 60,
+    marginBottom: 60,
   },
   headerWrapper: {
     paddingHorizontal: 16,
