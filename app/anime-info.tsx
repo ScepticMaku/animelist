@@ -52,6 +52,12 @@ interface AnimeData {
   }
 }
 
+interface ActivityLogData {
+  userId: string | null;
+  animeId: number;
+  description: string;
+}
+
 export default function AnimeInfo() {
   const { animeId } = useLocalSearchParams<{ animeId: any }>();
   const [userId, setUserId] = useState<string | null>(null);
@@ -59,6 +65,9 @@ export default function AnimeInfo() {
   const [userAnime, setUserAnime] = useState<any[] | null>(null);
   const [noteValue, setNoteValue] = useState('');
   const [episodeValue, setEpisodeValue] = useState('0');
+  const [originalEpisodeValue, setOriginalEpisodeValue] = useState<string>('0');
+  const [originalNoteValue, setOriginalNoteValue] = useState<string>('');
+  const [originalStatusValue, setOriginalStatusValue] = useState<string | null>('1');
   const [value, setValue] = useState<string | null>('1');
   const [isFocus, setIsFocus] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -69,6 +78,7 @@ export default function AnimeInfo() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [hasValue, setHasValue] = useState(false);
+
 
   const animeStatuses = [
     { label: 'Watching', value: 1 },
@@ -130,6 +140,31 @@ export default function AnimeInfo() {
     getCurrentSession();
   }, [setIsLoggedIn, setIsLoading, setUserId, setIsFavorite]);
 
+
+
+  async function logActivity({ userId, animeId, description }: ActivityLogData) {
+    if (!userId) {
+      console.warn('Cannot log activity: User not authenticated');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_anime_activities')
+        .insert({
+          user_id: userId,
+          anime_id: animeId,
+          description: description,
+        });
+
+      if (error) {
+        console.error('Error logging activity:', error.message);
+      }
+    } catch (err) {
+      console.error('Unexpected error logging activity:', err);
+    }
+  }
+
   async function toggleFavorite(isFav: boolean | undefined, anime_id: number, user_id: string | null) {
     setIsFavoriteLoading(true);
 
@@ -144,6 +179,13 @@ export default function AnimeInfo() {
       if (error) {
         console.error(error);
         showToast('Error adding to favorites: ' + error.message);
+      } else {
+        // 🌟 Log activity: Added to favorites
+        await logActivity({
+          userId: user_id,
+          animeId: anime_id,
+          description: `Favorited "${anime?.title.romaji}" ❤️`
+        });
       }
 
       setIsFavorite(true);
@@ -156,6 +198,13 @@ export default function AnimeInfo() {
       if (error) {
         console.error(error);
         showToast('Error removing to favorites: ' + error.message);
+      } else {
+        // 🌟 Log activity: Removed from favorites
+        await logActivity({
+          userId: user_id,
+          animeId: anime_id,
+          description: `Unfavorited "${anime?.title.romaji}"`
+        });
       }
 
       setIsFavorite(false);
@@ -167,6 +216,10 @@ export default function AnimeInfo() {
   async function saveAnime(status: string | null, episode: number, note: string) {
     setSaveLoading(true);
 
+    const numericStatus = typeof status === 'string' ? parseInt(status) : status;
+    const statusLabel = animeStatuses.find(s => s.value === numericStatus)?.label || status;
+
+
     const { data, error } = await supabase
       .from('user_animes')
       .insert({
@@ -177,14 +230,21 @@ export default function AnimeInfo() {
         notes: note
       })
       .select(`
-              *,
-              anime_statuses:anime_status_id(*)`)
+            *,
+            anime_statuses:anime_status_id(*)`)
       .eq('anime_id', animeId)
       .eq('user_id', userId);
 
     if (error) {
       console.error(error);
       showToast('Error adding to list: ' + error.message);
+    } else {
+      // 🌟 Log activity: Added anime to list
+      await logActivity({
+        userId,
+        animeId: parseInt(animeId),
+        description: `Added "${anime?.title.romaji}" to ${statusLabel} list${episode > 0 ? ` (Episode ${episode})` : ''}${note ? ` - Note: "${note}"` : ''}`
+      });
     }
 
     setSaveLoading(false);
@@ -201,6 +261,15 @@ export default function AnimeInfo() {
   async function updateAnime(status: string | null, episode: number, note: string) {
     setSaveLoading(true);
 
+    // ✅ FIXED: Compare against ORIGINAL values (when modal opened)
+    const prevStatusLabel = animeStatuses.find(s => s.value ===
+      (typeof originalStatusValue === 'string' ? parseInt(originalStatusValue) : originalStatusValue)
+    )?.label || originalStatusValue;
+
+    const statusLabel = animeStatuses.find(s => s.value ===
+      (typeof status === 'string' ? parseInt(status) : status)
+    )?.label || status;
+
     const { error } = await supabase
       .from('user_animes')
       .update({
@@ -213,14 +282,52 @@ export default function AnimeInfo() {
     if (error) {
       console.error(error);
       showToast('Error updating anime: ' + error.message);
+    } else {
+      // 🌟 Log activity: Updated anime details
+      const changes = [];
+
+      // ✅ Compare originals vs new values
+      if (String(originalStatusValue) !== String(status)) {
+        changes.push(`Status changed from ${prevStatusLabel} to ${statusLabel}`);
+      }
+
+      // ✅ THIS IS THE KEY FIX - use originalEpisodeValue!
+      if (String(originalEpisodeValue).trim() !== String(episode).trim()) {
+        changes.push(`Progress updated from Episode ${originalEpisodeValue} to ${episode}`);
+      }
+
+      // ✅ Use originalNoteValue for comparison
+      if (String(originalNoteValue || '').trim() !== String(note || '').trim()) {
+        if (!originalNoteValue && note) {
+          changes.push(`Added note: "${note}"`);
+        } else if (originalNoteValue && !note) {
+          changes.push(`Removed note`);
+        } else {
+          changes.push(`Updated note`);
+        }
+      }
+
+      console.log('📝 Changes detected:', changes); // Debug log
+
+      if (changes.length > 0) {
+        await logActivity({
+          userId,
+          animeId: parseInt(animeId),
+          description: `Updated "${anime?.title.romaji}": ${changes.join(', ')}`
+        });
+      }
+
+      showToast('Successfully updated!');
     }
 
     setSaveLoading(false);
-    showToast('Successfully updated!');
+    setModalVisible(false); // Close modal after successful update
   }
 
   async function deleteAnime() {
     setDeleteLoading(true);
+
+    const currentStatus = userAnime?.[0]?.anime_statuses?.name || 'list';
 
     const { error } = await supabase
       .from('user_animes')
@@ -230,6 +337,13 @@ export default function AnimeInfo() {
     if (error) {
       console.error(error);
       showToast('Error updating anime: ' + error.message);
+    } else {
+      // 🌟 Log activity: Removed anime from list
+      await logActivity({
+        userId,
+        animeId: parseInt(animeId),
+        description: `Removed "${anime?.title.romaji}" from ${currentStatus}`
+      });
     }
 
     setDeleteLoading(false);
@@ -254,10 +368,10 @@ export default function AnimeInfo() {
   return (
     <>
       <ScrollView style={Styles.container} contentContainerStyle={{ paddingBottom: 160 }}>
-        
+
         {/* 🌟 Navigation Back Button Control Bar */}
         <View style={Styles.backButtonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={Styles.backButtonCircle}
             onPress={() => router.back()}
             activeOpacity={0.7}
@@ -274,20 +388,27 @@ export default function AnimeInfo() {
           <View style={Styles.headerTextContainer}>
             <Text style={Styles.titleText}>{anime?.title.romaji}</Text>
             {anime?.title.english && <Text style={Styles.englishTitleText}>{anime?.title.english}</Text>}
-            
+
             {isLoggedIn && (
               <View style={Styles.actionRow}>
                 {isLoading ? (
                   <ActivityIndicator color="#3d85f1" />
                 ) : (
                   <>
-                    <TouchableOpacity 
-                      style={Styles.customButton} 
-                      onPress={() => setModalVisible(true)}
+                    <TouchableOpacity
+                      style={Styles.customButton}
+                      onPress={() => {
+                        setOriginalEpisodeValue(episodeValue);
+                        setOriginalNoteValue(noteValue);
+                        setOriginalStatusValue(value);
+                        setModalVisible(true);
+                        setModalVisible(true)
+                      }
+                      }
                     >
                       <Text style={Styles.customButtonText}>
-                        {userAnime && userAnime.length > 0 
-                          ? userAnime[0].anime_statuses.name 
+                        {userAnime && userAnime.length > 0
+                          ? userAnime[0].anime_statuses.name
                           : 'Add to List'}
                       </Text>
                     </TouchableOpacity>
@@ -299,10 +420,10 @@ export default function AnimeInfo() {
                       {isFavoriteLoading ? (
                         <ActivityIndicator color='white' size={20} />
                       ) : (
-                        <Ionicons 
-                          name={isFavorite ? 'heart' : 'heart-outline'} 
-                          color='white' 
-                          size={22} 
+                        <Ionicons
+                          name={isFavorite ? 'heart' : 'heart-outline'}
+                          color='white'
+                          size={22}
                         />
                       )}
                     </TouchableOpacity>
@@ -314,7 +435,7 @@ export default function AnimeInfo() {
         </View>
 
         <View style={Styles.divider} />
-        
+
         <Text style={Styles.sectionTitle}>Description</Text>
         <Text style={Styles.descriptionText}>{stripHtml(anime?.description || '').result}</Text>
 
@@ -349,14 +470,14 @@ export default function AnimeInfo() {
         )}
 
         <View style={Styles.divider} />
-        
+
         <Text style={Styles.sectionTitle}>Relations</Text>
         <View style={Styles.relationsGrid}>
           {anime?.relations.nodes.map((relation) => (
             <View key={relation.id} style={Styles.relationCard}>
               <Image
                 style={Styles.relationCover}
-                source={{ uri: relation.coverImage.large }} 
+                source={{ uri: relation.coverImage.large }}
               />
               <View style={Styles.relationMeta}>
                 <Text numberOfLines={2} style={Styles.relationTitle}>{relation.title.romaji}</Text>
@@ -420,23 +541,23 @@ export default function AnimeInfo() {
             <View style={{ marginTop: 20, gap: 10 }}>
               {userAnime && userAnime.length > 0 ? (
                 <>
-                  <TouchableOpacity 
-                    style={Styles.btnUpdate} 
+                  <TouchableOpacity
+                    style={Styles.btnUpdate}
                     onPress={() => updateAnime(value, parseInt(episodeValue), noteValue)}
                   >
                     {saveLoading ? <ActivityIndicator color="white" /> : <Text style={Styles.btnText}>Update Changes</Text>}
                   </TouchableOpacity>
-                  
-                  <TouchableOpacity 
-                    style={Styles.btnDelete} 
+
+                  <TouchableOpacity
+                    style={Styles.btnDelete}
                     onPress={() => deleteAnime()}
                   >
                     {deleteLoading ? <ActivityIndicator color="white" /> : <Text style={Styles.btnText}>Remove from List</Text>}
                   </TouchableOpacity>
                 </>
               ) : (
-                <TouchableOpacity 
-                  style={Styles.btnSave} 
+                <TouchableOpacity
+                  style={Styles.btnSave}
                   onPress={() => saveAnime(value, parseInt(episodeValue), noteValue)}
                 >
                   {saveLoading ? <ActivityIndicator color="white" /> : <Text style={Styles.btnText}>Save Tracker</Text>}
@@ -685,29 +806,29 @@ const Styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     color: '#1e293b',
   },
-  btnSave: { 
+  btnSave: {
     height: 44,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
-    backgroundColor: '#3d85f1' 
+    backgroundColor: '#3d85f1'
   },
-  btnUpdate: { 
+  btnUpdate: {
     height: 44,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
-    backgroundColor: '#10b981' 
+    backgroundColor: '#10b981'
   },
-  btnDelete: { 
+  btnDelete: {
     height: 44,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
-    backgroundColor: '#ef4444' 
+    backgroundColor: '#ef4444'
   },
   btnText: { color: '#ffffff', fontWeight: '700', fontSize: 14 },
 });

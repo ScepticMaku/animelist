@@ -101,7 +101,7 @@ export default function Signup() {
   }
 
   async function signUpUser() {
-    if (!validateInput()) return
+    if (!validateInput()) return;
 
     setProcessing(true);
 
@@ -109,7 +109,13 @@ export default function Signup() {
       email: email,
       password: confirmPassword,
       options: {
-        emailRedirectTo: redirectUrl
+        emailRedirectTo: redirectUrl,
+        // ✅ ADD THIS: Save username to user metadata!
+        data: {
+          username: username.trim(),
+          // You can add more metadata here if needed:
+          // display_name: username.trim(),
+        }
       }
     });
 
@@ -127,7 +133,6 @@ export default function Signup() {
         userEmail: email
       },
     });
-
   }
 
   return (
